@@ -96,7 +96,7 @@ struct ContentView: View {
 			SettingsView()
 		}
 		.sheet(isPresented: $isAddingPlant) {
-			PlantFormView(mode: .add, viewModel: PlantFormViewModel())
+			PlantFormView(mode: .add)
 		}
 	}
 	  

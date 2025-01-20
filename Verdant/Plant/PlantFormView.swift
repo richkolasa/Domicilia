@@ -1,13 +1,22 @@
 import SwiftUI
 import Observation
+import SwiftData
 
 struct PlantFormView: View {
 	@Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-	@Environment(PlantManager.self) var plantManager
-    @State private var viewModel: PlantFormViewModel
-    @State private var showingCamera = false
+	@Environment(PlantManager.self) private var plantManager
+    @State private var name = ""
+    @State private var notes = ""
+    @State private var wateringSchedule = Schedule.weekly
+    @State private var rotationSchedule = Schedule.none
+    @State private var fertilizerSchedule = Schedule.none
+    @State private var hasImage = false
     @State private var image: UIImage?
+	@State private var showingCamera = false
+	
+    // If editing existing plant
+    var plant: Plant?
     let mode: FormMode
     
     enum FormMode {
@@ -20,18 +29,71 @@ struct PlantFormView: View {
             case .edit: return "Edit Plant"
             }
         }
-        
-        var saveButtonText: String {
-            switch self {
-            case .add: return "Add"
-            case .edit: return "Save"
-            }
-        }
     }
     
-	init(mode: FormMode, viewModel: PlantFormViewModel) {
+    init(mode: FormMode, plant: Plant? = nil) {
         self.mode = mode
-        _viewModel = State(wrappedValue: viewModel)
+        self.plant = plant
+        // Use _name to set initial state
+        _name = State(initialValue: plant?.name ?? "")
+        _notes = State(initialValue: plant?.notes ?? "")
+        _wateringSchedule = State(initialValue: plant?.wateringSchedule ?? .weekly)
+        _rotationSchedule = State(initialValue: plant?.rotationSchedule ?? .none)
+        _fertilizerSchedule = State(initialValue: plant?.fertilizationSchedule ?? .none)
+        _hasImage = State(initialValue: plant?.imageFileName != nil)
+    }
+    
+    private var isValid: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasImage
+    }
+    
+    private func updatePlant() async throws {
+        if let plant = plant {
+            // Update existing plant
+            plant.name = name
+            plant.notes = notes.isEmpty ? nil : notes
+            
+            if plant.wateringSchedule != wateringSchedule {
+                plant.wateringSchedule = wateringSchedule
+                if let date = wateringSchedule.nextDate() {
+                    plant.nextWateringDate = date
+                }
+            }
+            
+            if plant.rotationSchedule != rotationSchedule {
+                plant.rotationSchedule = rotationSchedule
+                if let date = rotationSchedule.nextDate() {
+                    plant.nextRotationDate = date
+                }
+            }
+            
+            if plant.fertilizationSchedule != fertilizerSchedule {
+                plant.fertilizationSchedule = fertilizerSchedule
+                if let date = fertilizerSchedule.nextDate() {
+                    plant.nextFertilizationDate = date
+                }
+            }
+            
+            try await plantManager.updatePlant(plant, image: image)
+        } else {
+            // Create new plant
+            let now = Date()
+            let newPlant = Plant(
+                name: name,
+                wateringSchedule: wateringSchedule,
+                lastWateredDate: now,
+                nextWateringDate: wateringSchedule.nextDate() ?? now,
+                rotationSchedule: rotationSchedule,
+                lastRotatedDate: rotationSchedule != .none ? now : nil,
+                nextRotationDate: rotationSchedule.nextDate(),
+                fertilizationSchedule: fertilizerSchedule,
+                lastFertilizedDate: fertilizerSchedule != .none ? now : nil,
+                nextFertilizationDate: fertilizerSchedule.nextDate(),
+                notes: notes
+            )
+            
+            try await plantManager.addPlant(newPlant, image: image)
+        }
     }
     
     var body: some View {
@@ -40,7 +102,7 @@ struct PlantFormView: View {
                 VStack(spacing: 32) {
                     // Photo Button
                     Button {
-                        showingCamera = true
+						showingCamera = true
                     } label: {
                         if let image {
                             Image(uiImage: image)
@@ -73,7 +135,7 @@ struct PlantFormView: View {
                         )
                         
                         VStack {
-                            TextField("Name", text: $viewModel.name)
+                            TextField("Name", text: $name)
                                 .textFieldStyle(.plain)
                                 .padding()
                             
@@ -100,7 +162,7 @@ struct PlantFormView: View {
                                 icon: "drop.fill",
                                 iconColor: .blue,
                                 title: "Watering",
-                                schedule: $viewModel.wateringSchedule,
+                                schedule: $wateringSchedule,
                                 options: [.daily, .weekly, .biweekly, .monthly]
                             )
                             
@@ -111,7 +173,7 @@ struct PlantFormView: View {
                                 icon: "arrow.triangle.2.circlepath",
                                 iconColor: .green,
                                 title: "Rotation",
-                                schedule: $viewModel.rotationSchedule,
+                                schedule: $rotationSchedule,
                                 options: [.none, .weekly, .biweekly, .monthly]
                             )
                             
@@ -122,7 +184,7 @@ struct PlantFormView: View {
                                 icon: "leaf.fill",
                                 iconColor: .indigo,
                                 title: "Fertilizer",
-                                schedule: $viewModel.fertilizerSchedule,
+                                schedule: $fertilizerSchedule,
                                 options: [.none, .weekly, .biweekly, .monthly]
                             )
                         }
@@ -138,7 +200,7 @@ struct PlantFormView: View {
                             subtitle: "Add any care instructions or reminders"
                         )
                         
-                        TextField("Care notes", text: $viewModel.notes, axis: .vertical)
+                        TextField("Care notes", text: $notes, axis: .vertical)
                             .textFieldStyle(.plain)
                             .frame(minHeight: 100, alignment: .top)
                             .padding()
@@ -163,36 +225,23 @@ struct PlantFormView: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(mode.saveButtonText) {
+                    Button("Save") {
                         Task {
-                            if mode == .add {
-                                let plant = viewModel.createPlant()
-								try? await plantManager.addPlant(plant, image: image)
-							} else if let plant = viewModel.plant {
-                                viewModel.updatePlant()
-								try? await plantManager.updatePlant(plant, image: image)
-                            }
+                            try await updatePlant()
                             dismiss()
                         }
                     }
-                    .disabled(!viewModel.isValid)
+                    .disabled(!isValid)
                 }
             }
-            .fullScreenCover(isPresented: $showingCamera) {
-                CameraView(image: $image)
-                    .ignoresSafeArea()
-            }
             .task {
-                if mode == .edit, let plant = viewModel.plant {
-					image = plantManager.loadImage(for: plant)
-				}
-			}
-			.onChange(of: image) { oldValue, newValue in
-				if newValue != nil {
-					viewModel.hasImage = true
-				} else {
-					viewModel.hasImage = false
-				}
+                if mode == .edit, let plant = plant {
+                    image = plantManager.loadImage(for: plant)
+                }
+            }
+			.fullScreenCover(isPresented: $showingCamera) {
+				CameraView(image: $image)
+					.ignoresSafeArea()
 			}
         }
     }

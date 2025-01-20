@@ -167,7 +167,7 @@ struct PlantDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-			PlantFormView(mode: .edit, viewModel: PlantFormViewModel(plant: plant))
+			PlantFormView(mode: .edit)
         }
     }
 }
