@@ -1,37 +1,49 @@
-//import Foundation
-//import SwiftData
-//
-//@Observable
-//class PlantManager {
-//    private let modelContext: ModelContext
-//    private let calendar = Calendar.current
-//    
-//    init(modelContext: ModelContext) {
-//        self.modelContext = modelContext
-//    }
-//    
-//    func updatePlantStatuses() {
-//        let descriptor = FetchDescriptor<Plant>()
-//        guard let plants = try? modelContext.fetch(descriptor) else { return }
-//        
-//        let today = calendar.startOfDay(for: Date())
-//        
-//        for plant in plants {
-//            // Check watering status
-//            let wateringDate = calendar.startOfDay(for: plant.nextWateringDate)
-//            if today >= wateringDate && !plant.needsWatering {
-//                plant.needsWatering = true
-//            }
-//            
-//            // Check rotation status
-//            if let nextRotation = plant.nextRotationDate {
-//                let rotationDate = calendar.startOfDay(for: nextRotation)
-//                if today >= rotationDate && !plant.needsRotation {
-//                    plant.needsRotation = true
-//                }
-//            }
-//        }
-//        
-//        try? modelContext.save()
-//    }
-//} 
+import Foundation
+import SwiftUI
+import CloudKit
+import SwiftData
+
+@Observable
+final class PlantManager {
+    private let imageManager: PlantImageManager
+    private let modelContext: ModelContext
+    
+    init(modelContext: ModelContext, imageManager: PlantImageManager = PlantImageManager()) {
+        self.modelContext = modelContext
+        self.imageManager = imageManager
+    }
+    
+    // MARK: - Plant Management
+    
+    func addPlant(_ plant: Plant, image: UIImage? = nil) async throws {
+        if let image = image {
+            try await imageManager.saveImage(image, for: plant)
+        }
+        modelContext.insert(plant)
+    }
+    
+    func updatePlant(_ plant: Plant, image: UIImage? = nil) async throws {
+        if let image = image {
+            try await imageManager.saveImage(image, for: plant)
+        }
+    }
+    
+    func deletePlant(_ plant: Plant) async throws {
+        try await imageManager.deleteImage(for: plant)
+        modelContext.delete(plant)
+    }
+    
+    // MARK: - Image Management
+    
+    func loadImage(for plant: Plant) -> UIImage? {
+        imageManager.loadImage(for: plant)
+    }
+    
+    func handleScenePhaseChange(_ phase: ScenePhase) {
+        imageManager.handleScenePhaseChange(phase)
+    }
+    
+    var cloudError: String? {
+        imageManager.cloudError
+    }
+} 

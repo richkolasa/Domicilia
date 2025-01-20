@@ -23,14 +23,14 @@ class PlantFormViewModel {
 			self.fertilizerSchedule = plant.fertilizationSchedule
         }
     }
+	
+	var hasImage: Bool = false
+	
+	var isValid: Bool {
+		!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasImage
+	}
     
-    var isValid: Bool {
-        !name.isEmpty
-    }
-    
-	func updatePlant() {
-		let now = Date()
-		
+	func updatePlant() {		
 		if let plant = plant {
 			// Update existing plant
 			plant.name = name

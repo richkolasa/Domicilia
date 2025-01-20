@@ -4,7 +4,7 @@ import Observation
 struct PlantFormView: View {
 	@Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(PlantImageManager.self) private var imageManager
+	@Environment(PlantManager.self) var plantManager
     @State private var viewModel: PlantFormViewModel
     @State private var showingCamera = false
     @State private var image: UIImage?
@@ -31,15 +31,6 @@ struct PlantFormView: View {
     
 	init(mode: FormMode, viewModel: PlantFormViewModel) {
         self.mode = mode
-        
-//        if let plant {
-//			viewModel = PlantFormViewModel(context: modelContext, plant: plant)
-//            if let imageData = plant.imageData {
-//                _image = State(wrappedValue: UIImage(data: imageData))
-//            }
-//        } else {
-//			viewModel = PlantFormViewModel(context: modelContext)
-//        }
         _viewModel = State(wrappedValue: viewModel)
     }
     
@@ -176,15 +167,10 @@ struct PlantFormView: View {
                         Task {
                             if mode == .add {
                                 let plant = viewModel.createPlant()
-                                if let image = image {
-                                    try? await imageManager.saveImage(image, for: plant)
-                                }
-                                modelContext.insert(plant)
+								try? await plantManager.addPlant(plant, image: image)
 							} else if let plant = viewModel.plant {
                                 viewModel.updatePlant()
-                                if let image = image {
-                                    try? await imageManager.saveImage(image, for: plant)
-                                }
+								try? await plantManager.updatePlant(plant, image: image)
                             }
                             dismiss()
                         }
@@ -198,9 +184,16 @@ struct PlantFormView: View {
             }
             .task {
                 if mode == .edit, let plant = viewModel.plant {
-                    image = imageManager.loadImage(for: plant)
-                }
-            }
+					image = plantManager.loadImage(for: plant)
+				}
+			}
+			.onChange(of: image) { oldValue, newValue in
+				if newValue != nil {
+					viewModel.hasImage = true
+				} else {
+					viewModel.hasImage = false
+				}
+			}
         }
     }
 }

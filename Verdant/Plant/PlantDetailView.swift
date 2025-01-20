@@ -3,7 +3,7 @@ import Foundation
 
 struct PlantDetailView: View {
     @Environment(\.dismiss) private var dismiss
-	@Environment(\.managedObjectContext) private var modelContext
+	@Environment(\.modelContext) private var modelContext
     let plant: Plant
     @State private var showingEditSheet = false
     
@@ -144,6 +144,14 @@ struct PlantDetailView: View {
                                 .italic()
                         }
                     }
+					
+					Button(role: .destructive) {
+						modelContext.delete(plant)
+						dismiss()
+					} label: {
+						Label("Delete", systemImage: "trash.fill")
+					}
+
                 }
                 .padding(.horizontal)
             }

@@ -6,7 +6,7 @@ struct ContentView: View {
 	@Environment(\.horizontalSizeClass) var horizontalSizeClass
 	@Environment(WeatherManager.self) var weatherManager
 	@Environment(SettingsCoordinator.self) var settings
-	@Environment(PlantImageManager.self) private var imageManager
+	@Environment(PlantManager.self) private var plantManager
 	
 	@Query var plants: [Plant]
 
@@ -97,17 +97,6 @@ struct ContentView: View {
 		}
 		.sheet(isPresented: $isAddingPlant) {
 			PlantFormView(mode: .add, viewModel: PlantFormViewModel())
-		}
-		.alert("iCloud Sync Error", 
-			   isPresented: .init(
-				get: { imageManager.cloudError != nil },
-				set: { if !$0 { imageManager.cloudError = nil } }
-			   )) {
-			Button("OK") {
-				imageManager.cloudError = nil
-			}
-		} message: {
-			Text(imageManager.cloudError ?? "")
 		}
 	}
 	  

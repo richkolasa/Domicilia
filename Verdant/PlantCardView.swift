@@ -66,7 +66,7 @@ extension Schedule {
 }
 
 struct PlantCardView: View {
-	@Environment(PlantImageManager.self) private var imageManager
+	@Environment(PlantManager.self) private var plantManager
 	let plant: Plant
 	private let cornerRadius: CGFloat = 16
 	@Namespace private var namespace
@@ -80,7 +80,7 @@ struct PlantCardView: View {
 				// Image at the top with status overlays
 				ZStack(alignment: .topTrailing) {
 					ZStack(alignment: .bottom) {
-						if let image = imageManager.loadImage(for: plant) {
+						if let image = plantManager.loadImage(for: plant) {
 							Image(uiImage: image)
 								.resizable()
 								.scaledToFit()
