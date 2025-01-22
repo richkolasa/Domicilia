@@ -4,8 +4,10 @@ import Foundation
 struct PlantDetailView: View {
     @Environment(\.dismiss) private var dismiss
 	@Environment(\.modelContext) private var modelContext
+	@Environment(PlantManager.self) private var plantManager
     let plant: Plant
     @State private var showingEditSheet = false
+	@State private var isDeleteDialogPresented = false
     
     private func formatNextCareDate(_ date: Date, lastDate: Date?) -> String {
         let calendar = Calendar.current
@@ -36,16 +38,15 @@ struct PlantDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Hero Image
-//                if let imageData = plant.imageData,
-//                   let uiImage = UIImage(data: imageData) {
-//                    Image(uiImage: uiImage)
-//                        .resizable()
-//                        .scaledToFit()
-//						.frame(maxWidth: 300)
-//                        .clipShape(RoundedRectangle(cornerRadius: 16))
-//                        .padding(.horizontal, 32)
-//                }
-                
+				if let image = plantManager.loadImage(for: plant) {
+					Image(uiImage: image)
+						.resizable()
+						.scaledToFit()
+						.frame(maxWidth: 300)
+						.clipShape(RoundedRectangle(cornerRadius: 16))
+						.padding(.horizontal, 32)
+				}
+
                 // Info Sections
                 VStack(spacing: 32) {
                     // Care Schedule Card
@@ -146,8 +147,7 @@ struct PlantDetailView: View {
                     }
 					
 					Button(role: .destructive) {
-						modelContext.delete(plant)
-						dismiss()
+						isDeleteDialogPresented.toggle()
 					} label: {
 						Label("Delete", systemImage: "trash.fill")
 					}
@@ -157,6 +157,20 @@ struct PlantDetailView: View {
             }
             .padding(.vertical)
         }
+		.confirmationDialog("Delete this plant?", isPresented: $isDeleteDialogPresented, actions: {
+			Button(role: .destructive) {
+				modelContext.delete(plant)
+				dismiss()
+			} label: {
+				Text("Delete")
+			}
+
+			Button(role: .cancel) {
+				
+			} label: {
+				Text("Cancel")
+			}
+		}, message: { Text("Are you sure you want to delete this plant?") })
         .navigationTitle(plant.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
