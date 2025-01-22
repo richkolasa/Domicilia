@@ -42,14 +42,14 @@ struct CelebrationView: View {
 				VStack(spacing: 16) {
 					Image(systemName: "checkmark.circle.fill")
 						.font(.system(size: 48))
-						.foregroundStyle(.white)
+						.foregroundStyle(.primary)
 						.scaleEffect(isAnimating ? 1.1 : 0.9)
 					
 					Text("All Done!")
 						.font(.title.weight(.bold))
 						.fontDesign(.rounded)
 					
-					Text("Your plants are happy and healthy")
+					Text("Your plants are happy and healthy.")
 						.font(.body)
 						.foregroundStyle(.secondary)
 						.multilineTextAlignment(.center)
@@ -70,5 +70,11 @@ struct CelebrationView: View {
 		.onAppear {
 			isAnimating = true
 		}
+	}
+}
+
+#Preview {
+	CelebrationView {
+		
 	}
 }

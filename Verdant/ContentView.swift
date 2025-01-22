@@ -90,7 +90,7 @@ struct ContentView: View {
 			}
 		}
 		.sheet(isPresented: $isCaringForPlants) {
-			CareSessionView(plants: Array(sortedPlants))
+			CareSessionView()
 		}
 		.sheet(isPresented: $settings.isShowingSettings) {
 			SettingsView()

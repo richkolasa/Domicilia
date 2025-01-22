@@ -1,17 +1,90 @@
 import SwiftUI
+import SwiftData
 
 struct CareSessionView: View {
 	@Environment(\.dismiss) private var dismiss
-	@State private var viewModel: CareSessionViewModel
+	@Environment(PlantManager.self) var plantManager
+	@State private var currentIndex = 0
 	@State private var showingCelebration = false
+	@State private var completedTasks: Set<CareTask> = []
 	
-	init(plants: [Plant]) {
-		_viewModel = State(wrappedValue: CareSessionViewModel(plants: plants))
+	@Query var plants: [Plant]
+	
+	var currentPlant: Plant {
+		plants[currentIndex]
+	}
+	
+	var allTasks: [CareTask] {
+		var tasks: [CareTask] = []
+		for plant in plants {
+			if plant.needsWatering {
+				tasks.append(CareTask(type: .watering, plantName: plant.name))
+			}
+			if plant.needsRotation {
+				tasks.append(CareTask(type: .rotation, plantName: plant.name))
+			}
+			if plant.needsFertilizing {
+				tasks.append(CareTask(type: .fertilizing, plantName: plant.name))
+			}
+		}
+		return tasks
+	}
+	
+	var isComplete: Bool {
+		let wateringComplete = !currentPlant.needsWatering || completedTasks.contains(CareTask(type: .watering, plantName: currentPlant.name))
+		let rotationComplete = !currentPlant.needsRotation || completedTasks.contains(CareTask(type: .rotation, plantName: currentPlant.name))
+		let fertilizingComplete = !currentPlant.needsFertilizing || completedTasks.contains(CareTask(type: .fertilizing, plantName: currentPlant.name))
+		
+		return wateringComplete && rotationComplete && fertilizingComplete
+	}
+	
+	func completeTask(_ task: CareTask) {
+		let now = Date()
+		
+		switch task.type {
+		case .watering:
+			currentPlant.lastWateredDate = now
+			if let nextDate = currentPlant.wateringSchedule.nextDate() {
+				currentPlant.nextWateringDate = nextDate
+			}
+			
+		case .rotation:
+			currentPlant.lastRotatedDate = now
+			if let nextDate = currentPlant.rotationSchedule.nextDate() {
+				currentPlant.nextRotationDate = nextDate
+			}
+			
+		case .fertilizing:
+			currentPlant.lastFertilizedDate = now
+			if let nextDate = currentPlant.fertilizationSchedule.nextDate() {
+				currentPlant.nextFertilizationDate = nextDate
+			}
+		}
+		
+		completedTasks.insert(task)
+
+		// Only start advancing if all tasks are complete and we're not already advancing
+		if isComplete && hasNextPlant {
+			DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+				withAnimation {
+					self.advanceToNextPlant()
+				}
+			}
+		}
+	}
+	
+	var hasNextPlant: Bool {
+		currentIndex < plants.count - 1
+	}
+	
+	func advanceToNextPlant() {
+		guard hasNextPlant else { return }
+		currentIndex += 1
 	}
 	
 	var body: some View {
 		NavigationStack {
-			if !viewModel.hasNextPlant && viewModel.isComplete {
+			if !hasNextPlant && isComplete {
 				CelebrationView {
 					dismiss()
 				}
@@ -20,16 +93,14 @@ struct CareSessionView: View {
 				VStack(spacing: 24) {
 					// Current Plant Info
 					VStack(spacing: 16) {
-//						if let imageData = viewModel.currentPlant.imageData,
-//						   let uiImage = UIImage(data: imageData) {
-//							Image(uiImage: uiImage)
-//								.resizable()
-//								.aspectRatio(contentMode: .fit)
-//								.frame(width: 200)
-//								.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-//						}
-//						
-						Text(viewModel.currentPlant.name)
+						if let image = plantManager.loadImage(for: currentPlant) {
+							Image(uiImage: image)
+								.resizable()
+								.aspectRatio(contentMode: .fit)
+								.frame(width: 200)
+								.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+						}
+						Text(currentPlant.name)
 					}
 					.padding(.top)
 								
@@ -41,33 +112,75 @@ struct CareSessionView: View {
 							.frame(maxWidth: .infinity, alignment: .leading)
 						
 						VStack(spacing: 1) {
-							let lastWaterDate = viewModel.currentPlant.lastFertilizedDate ?? Date.distantFuture
+							let lastWaterDate = currentPlant.lastFertilizedDate ?? Date.distantFuture
 							let wasWateredToday = Calendar.current.isDateInToday(lastWaterDate)
-							if viewModel.currentPlant.needsWatering || wasWateredToday {
+							if currentPlant.needsWatering || wasWateredToday {
 								TaskButton(
-									task: CareTask(type: .watering, plantName: viewModel.currentPlant.name),
-									isComplete: viewModel.completedTasks.contains(CareTask(type: .watering, plantName: viewModel.currentPlant.name)),
-									action: { viewModel.completeTask(CareTask(type: .watering, plantName: viewModel.currentPlant.name)) }
+									task: CareTask(
+										type: .watering,
+										plantName: currentPlant.name
+									),
+									isComplete: completedTasks.contains(
+										CareTask(
+											type: .watering,
+											plantName: currentPlant.name
+										)
+									),
+									action: { completeTask(
+										CareTask(
+											type: .watering,
+											plantName: currentPlant.name
+										)
+									)
+									}
 								)
 							}
 							
-							let lastRotated = viewModel.currentPlant.lastRotatedDate ?? Date.distantFuture
+							let lastRotated = currentPlant.lastRotatedDate ?? Date.distantFuture
 							let wasRotatedToday = Calendar.current.isDateInToday(lastRotated)
-							if viewModel.currentPlant.needsRotation || wasRotatedToday {
+							if currentPlant.needsRotation || wasRotatedToday {
 								TaskButton(
-									task: CareTask(type: .rotation, plantName: viewModel.currentPlant.name),
-									isComplete: viewModel.completedTasks.contains(CareTask(type: .rotation, plantName: viewModel.currentPlant.name)),
-									action: { viewModel.completeTask(CareTask(type: .rotation, plantName: viewModel.currentPlant.name)) }
+									task: CareTask(
+										type: .rotation,
+										plantName: currentPlant.name
+									),
+									isComplete: completedTasks.contains(
+										CareTask(
+											type: .rotation,
+											plantName: currentPlant.name
+										)
+									),
+									action: { completeTask(
+										CareTask(
+											type: .rotation,
+											plantName: currentPlant.name
+										)
+									)
+									}
 								)
 							}
 							
-							let lastFertilized = viewModel.currentPlant.lastFertilizedDate ?? Date.distantFuture
+							let lastFertilized = currentPlant.lastFertilizedDate ?? Date.distantFuture
 							let wasFertlizedToday = Calendar.current.isDateInToday(lastFertilized)
-							if viewModel.currentPlant.needsFertilizing || wasFertlizedToday {
+							if currentPlant.needsFertilizing || wasFertlizedToday {
 								TaskButton(
-									task: CareTask(type: .fertilizing, plantName: viewModel.currentPlant.name),
-									isComplete: viewModel.completedTasks.contains(CareTask(type: .fertilizing, plantName: viewModel.currentPlant.name)),
-									action: { viewModel.completeTask(CareTask(type: .fertilizing, plantName: viewModel.currentPlant.name)) }
+									task: CareTask(
+										type: .fertilizing,
+										plantName: currentPlant.name
+									),
+									isComplete: completedTasks.contains(
+										CareTask(
+											type: .fertilizing,
+											plantName: currentPlant.name
+										)
+									),
+									action: { completeTask(
+										CareTask(
+											type: .fertilizing,
+											plantName: currentPlant.name
+										)
+									)
+									}
 								)
 							}
 						}
@@ -105,4 +218,9 @@ struct TaskButton: View {
 		}
 		.buttonStyle(.plain)
 	}
+}
+
+#Preview {
+	CareSessionView()
+		.previewWith()
 }

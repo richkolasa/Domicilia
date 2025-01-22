@@ -45,8 +45,12 @@ struct VerdantApp: App {
 				.modelContainer(sharedModelContainer)
 				.fontDesign(.rounded)
 		}
-		.onChange(of: scenePhase) { _, newPhase in
+		.onChange(of: scenePhase) { oldPhase, newPhase in
 			plantManager.handleScenePhaseChange(newPhase)
+			
+			if newPhase == .active, oldPhase != newPhase {
+				weatherManager.startLocationUpdates()
+			}
 		}
 	}
 }

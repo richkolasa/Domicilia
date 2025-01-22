@@ -13,7 +13,6 @@ struct PlantFormView: View {
     @State private var fertilizerSchedule = Schedule.none
     @State private var hasImage = false
     @State private var image: UIImage?
-	@State private var showingCamera = false
 	
     // If editing existing plant
     var plant: Plant?
@@ -101,31 +100,8 @@ struct PlantFormView: View {
             ScrollView {
                 VStack(spacing: 32) {
                     // Photo Button
-                    Button {
-						showingCamera = true
-                    } label: {
-                        if let image {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 100, height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .stroke(.quaternary, lineWidth: 1)
-                                }
-                        } else {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(.quaternary)
-                                    .frame(width: 100, height: 100)
-                                
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 30))
-                            }
-                        }
-                    }
-                    .padding(.top, 16)
+					CameraImageButton(image: $image)
+						.padding(.top, 16)
                     
                     // Basic Info Section
                     VStack(alignment: .leading, spacing: 12) {
@@ -239,9 +215,8 @@ struct PlantFormView: View {
                     image = plantManager.loadImage(for: plant)
                 }
             }
-			.fullScreenCover(isPresented: $showingCamera) {
-				CameraView(image: $image)
-					.ignoresSafeArea()
+			.onChange(of: image) { _, newValue in
+				hasImage = newValue != nil
 			}
         }
     }
@@ -308,6 +283,12 @@ struct CareOptionRow: View {
     }
 }
 
-//#Preview {
-//	PlantFormView(mode: .add)
-//}
+#Preview("Add Plant") {
+    PlantFormView(mode: .add)
+        .previewWith()
+}
+
+#Preview("Edit Plant") {
+    PlantFormView(mode: .edit, plant: try! PreviewContainer.shared.modelContext.fetch(FetchDescriptor<Plant>()).first!)
+        .previewWith()
+}

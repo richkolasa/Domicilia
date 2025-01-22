@@ -67,7 +67,7 @@ class WeatherManager: NSObject, CLLocationManagerDelegate {
 			.store(in: &cancellables)
 	}
 	
-	private func startLocationUpdates() {
+	func startLocationUpdates() {
 		locationManager.requestWhenInUseAuthorization()
 	}
 	

@@ -3,6 +3,7 @@ import SwiftUI
 import CloudKit
 import SwiftData
 
+@MainActor
 @Observable
 final class PlantManager {
     private let imageManager: PlantImageManager
@@ -15,11 +16,13 @@ final class PlantManager {
     
     // MARK: - Plant Management
     
+	@MainActor
     func addPlant(_ plant: Plant, image: UIImage? = nil) async throws {
         if let image = image {
             try await imageManager.saveImage(image, for: plant)
         }
         modelContext.insert(plant)
+		try modelContext.save()
     }
     
     func updatePlant(_ plant: Plant, image: UIImage? = nil) async throws {
@@ -31,6 +34,7 @@ final class PlantManager {
     func deletePlant(_ plant: Plant) async throws {
         try await imageManager.deleteImage(for: plant)
         modelContext.delete(plant)
+		try modelContext.save()
     }
     
     // MARK: - Image Management

@@ -3,8 +3,8 @@ import StoreKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+	@Environment(\.modelContext) private var modelContext
     @Environment(WeatherManager.self) private var weatherManager
-    @Environment(\.modelContext) private var modelContext
     @AppStorage("useCelsius") private var useCelsius = false
     @AppStorage("useKph") private var useKph = false
     
