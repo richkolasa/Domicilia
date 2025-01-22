@@ -8,7 +8,8 @@ import SwiftData
 final class PlantManager {
     private let imageManager: PlantImageManager
     private let modelContext: ModelContext
-    
+    var isSaving = false
+	
     init(modelContext: ModelContext, imageManager: PlantImageManager = PlantImageManager()) {
         self.modelContext = modelContext
         self.imageManager = imageManager
@@ -16,19 +17,22 @@ final class PlantManager {
     
     // MARK: - Plant Management
     
-	@MainActor
     func addPlant(_ plant: Plant, image: UIImage? = nil) async throws {
+		isSaving = true
         if let image = image {
             try await imageManager.saveImage(image, for: plant)
         }
         modelContext.insert(plant)
 		try modelContext.save()
+		isSaving = false
     }
     
     func updatePlant(_ plant: Plant, image: UIImage? = nil) async throws {
+		isSaving = true
         if let image = image {
             try await imageManager.saveImage(image, for: plant)
         }
+		isSaving = false
     }
     
     func deletePlant(_ plant: Plant) async throws {

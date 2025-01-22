@@ -134,9 +134,15 @@ final class PlantImageManager {
     }
     
     // Save image locally and to CloudKit
-    func saveImage(_ image: UIImage, for plant: Plant) async throws {
-        guard let data = image.jpegData(compressionQuality: 0.7) else {
-            throw ImageError.compressionFailed
+	func saveImage(_ image: UIImage, for plant: Plant) async throws {
+		let scale = 1080 / image.size.width
+		let newHeight = image.size.height * scale
+		UIGraphicsBeginImageContext(CGSizeMake(1080, newHeight))
+		image.draw(in: CGRect(x: 0, y: 0, width: 1080, height: newHeight))
+		let newImage = UIGraphicsGetImageFromCurrentImageContext()
+		UIGraphicsEndImageContext()
+		guard let data = newImage?.jpegData(compressionQuality: 0.7) else {
+			throw ImageError.compressionFailed
         }
         
         // Generate unique filename if none exists

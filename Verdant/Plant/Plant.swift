@@ -11,6 +11,7 @@ import SwiftData
 
 @Model
 final class Plant {
+//	@Attribute(.unique)
 	var id: UUID = UUID()
 	var name: String = ""
 	
@@ -69,6 +70,7 @@ final class Plant {
 	}
 	
 	init(
+		id: UUID = UUID(),
 		name: String,
 		wateringSchedule: Schedule,
 		lastWateredDate: Date,
@@ -81,6 +83,7 @@ final class Plant {
 		nextFertilizationDate: Date?,
 		notes: String?
 	) {
+		self.id = id
 		self.name = name
 		self.wateringSchedule = wateringSchedule
 		self.lastWateredDate = lastWateredDate

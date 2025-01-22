@@ -106,20 +106,13 @@ struct PlantFormView: View {
                     // Basic Info Section
                     VStack(alignment: .leading, spacing: 12) {
                         SectionHeader(
-                            title: "Basic Info",
-                            subtitle: "Name and location of your plant"
+                            title: "Basic Info"
                         )
                         
                         VStack {
                             TextField("Name", text: $name)
                                 .textFieldStyle(.plain)
                                 .padding()
-                            
-							Divider()
-								.padding(.horizontal)
-                            
-							Divider()
-								.padding(.horizontal)
                         }
 						.background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -201,13 +194,17 @@ struct PlantFormView: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            try await updatePlant()
-                            dismiss()
-                        }
-                    }
-                    .disabled(!isValid)
+					if plantManager.isSaving {
+						ProgressView()
+					} else {
+						Button("Save") {
+							Task {
+								try await updatePlant()
+								dismiss()
+							}
+						}
+						.disabled(!isValid)
+					}
                 }
             }
             .task {
@@ -218,6 +215,7 @@ struct PlantFormView: View {
 			.onChange(of: image) { _, newValue in
 				hasImage = newValue != nil
 			}
+			.interactiveDismissDisabled(plantManager.isSaving)
         }
     }
 }

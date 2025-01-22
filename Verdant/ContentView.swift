@@ -63,7 +63,7 @@ struct ContentView: View {
 						.disabled(plantsNeedingCare == 0)
 					}
 					
-					let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: horizontalSizeClass == .regular ? 3 : 2)
+					let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
 					
 					LazyVGrid(columns: columns, spacing: 16) {
 						ForEach(sortedPlants) { plant in
